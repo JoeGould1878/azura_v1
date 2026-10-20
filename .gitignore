@@ -1,0 +1,9 @@
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+test/host/build/
+__pycache__/
+*.pyc
+.vscode/
+.cache/
