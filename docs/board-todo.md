@@ -30,7 +30,7 @@ Work top to bottom. Each step names the parts, nets and values, with the Schemat
 | SW1 | 6 × 6 mm tact switch, unfitted (fallback button) | | `Switch:SW_Push` | `Button_Switch_THT:SW_PUSH_6mm` |
 | TP1–TP8 | Test pads (copper only) | | `Connector:TestPoint` | `TestPoint:TestPoint_Pad_D1.5mm` |
 
-**R19 sets the lamp's current limit:** 6800 ÷ R19, ±25 %. 4.7 kΩ gives 1.1–1.8 A, which suits any lamp up to 1 A (5 W), and it is the same part as R14, so it adds no BOM line. For a 5–6 W lamp use 4.3 kΩ (C23159; 1.2–2.0 A). Don't go below about 3.6 kΩ, or the limit can exceed the SY6280's 2 A rating. A lamp drawing more than about 1.1 A needs a different switch, so check the lamp before ordering.
+**R19 sets the lamp's current limit:** 6800 ÷ R19, ±25 %. 4.7 kΩ gives 1.1–1.8 A, which suits any lamp up to 1 A (5 W), and it is the same part as R14, so it adds no BOM line. For a lamp drawing 1.0–1.1 A use 4.3 kΩ (C23159; 1.2–2.0 A). That is the lowest safe value: its worst case already sits at the SY6280's 2 A ceiling. A lamp drawing more than about 1.1 A needs a different switch, so check the lamp before ordering.
 
 ## 2. Delete
 

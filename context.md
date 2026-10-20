@@ -31,7 +31,7 @@ A double clap toggles the lamp via GPIO3 (SY6280 EN). Firmware: C on ESP-IDF v6.
 - Status LED + fallback switch parked: DNP footprints on the carrier (LED D4 + R21 on GPIO7, SW1 on GPIO10);
   firmware already uses the module LED (GPIO8) and BOOT button (GPIO9).
 - Lamp not chosen → assume 5 V ≤ 1 A (5 W). R_SET 4.7 kΩ (C23162, same as R14) → limit 1.1–1.8 A;
-  4.3 kΩ for 5–6 W. Never below ~3.6 kΩ (limit would exceed the SY6280's 2 A max); > ~1.1 A lamp → other switch.
+  4.3 kΩ (1.2–2.0 A) is the floor: its worst case = the SY6280's 2 A max. Lamp > ~1.1 A → other switch.
 - No enclosure → assume inline box, sound hole under the board.
 - v1 extras: none (VBUS monitor, J4 CC sense, RRIO op-amp → v1.1).
 - My defaults, not confirmed: JLC top-side SMT + hand-soldered THT, 5 boards; lamp off after power cut; Wi-Fi off.
