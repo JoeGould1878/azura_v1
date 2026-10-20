@@ -1,3 +1,3 @@
 idf_component_register(SRCS "main.c"
-                       PRIV_REQUIRES spi_flash
-                       INCLUDE_DIRS "")
+                       INCLUDE_DIRS "."
+                       PRIV_REQUIRES adc_sampler lamp ui esp_app_format)

@@ -1,50 +1,66 @@
 #ifndef ADC_SAMPLER_H
 #define ADC_SAMPLER_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
 
-/* 
- * ADC Configuration Macros
- * Frame size must be a multiple of the SOC ADC data size (4 bytes).
- * 256 bytes @ 16kHz 12-bit = 128 samples per frame (8ms ISR interval).
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*
+ * Continuous capture of the microphone channel (ADC1 channel 0, GPIO0) with DMA.
+ *
+ * The ADC runs at ADC_SAMPLER_SAMPLE_RATE_HZ and the driver delivers frames of
+ * ADC_SAMPLER_FRAME_SAMPLES results (each result is 4 bytes on the ESP32-C3). The driver keeps a
+ * pool of frames so the reader can be late by up to ~128 ms; if it falls further behind, the oldest
+ * audio is dropped and counted in adc_sampler_stats_t.overflows.
+ *
+ * Use from a single reader task: adc_sampler_start(), then adc_sampler_read() in a loop.
  */
-#define ADC_SAMPLE_FREQ_HZ    16000
-#define ADC_CONV_FRAME_SIZE   256
-#define ADC_STORE_BUF_SIZE    1024
+
+/** Microphone sample rate. */
+#define ADC_SAMPLER_SAMPLE_RATE_HZ 16000
+
+/** Samples per DMA frame: 128 samples = 8 ms at 16 kHz. */
+#define ADC_SAMPLER_FRAME_SAMPLES 128
+
+/** Largest raw code the 12-bit ADC returns. */
+#define ADC_SAMPLER_MAX_CODE 4095
+
+typedef struct {
+    uint32_t samples;     /*!< valid samples delivered to the caller */
+    uint32_t overflows;   /*!< times the driver's pool filled up and audio was dropped */
+    uint32_t bad_results; /*!< results flagged invalid or from an unexpected channel */
+    uint32_t read_errors; /*!< failed reads or parses */
+} adc_sampler_stats_t;
 
 /**
- * @brief Initialises the continuous ADC DMA engine.
- * 
- * @param dsp_queue FreeRTOS Queue handle used to pass DMA buffer pointers 
- *                  from the hardware ISR to the DSP task.
- * @return esp_err_t ESP_OK on success, ESP_ERR_NO_MEM if allocation fails, 
- *                   or ESP_ERR_INVALID_ARG for bad parameters.
+ * @brief Create the continuous ADC driver and start sampling.
+ * @return ESP_OK, ESP_ERR_INVALID_STATE if already started, or the driver's error code.
  */
-esp_err_t adc_sampler_init(QueueHandle_t dsp_queue_handle);
+esp_err_t adc_sampler_start(void);
 
 /**
- * @brief Blocks the calling task until a new audio frame is ready.
- * 
- * @param out_buffer Pointer to a local buffer (minimum ADC_CONV_FRAME_SIZE bytes) 
- *                   where the DMA data will be copied for DSP processing.
- * @param ticks_to_wait FreeRTOS ticks to wait before timing out.
- * @return esp_err_t ESP_OK if data was received, ESP_ERR_TIMEOUT if the queue timed out.
+ * @brief Read raw 12-bit codes (0..ADC_SAMPLER_MAX_CODE) in arrival order.
+ *
+ * Blocks up to @p ticks_to_wait for data and returns at most @p max_samples (and at most one
+ * frame) per call. A short count is normal; just call again.
+ *
+ * @return Number of samples written to @p out (0 on timeout or error).
  */
-esp_err_t adc_sampler_wait_for_data(uint8_t *out_buffer, TickType_t ticks_to_wait);
+size_t adc_sampler_read(uint16_t *out, size_t max_samples, TickType_t ticks_to_wait);
 
-/**
- * @brief Safely halts the ADC DMA engine, deregisters the ISR, and frees memory.
- * 
- * @return esp_err_t ESP_OK on success, or applicable hardware error codes.
- */
-esp_err_t adc_sampler_deinit(void);
-/**
- * @brief Retrieves the number of ADC DMA buffer overflow events since initialization.
- * Getter to expose static overflow_counter to the DSP task for monitoring purposes.
- * @return uint32_t The count of overflow events.
- */
-uint32_t adc_sampler_get_overflow_count(void);
+/** @brief Copy the running counters. */
+void adc_sampler_get_stats(adc_sampler_stats_t *out);
+
+/** @brief Stop sampling and free the driver. */
+esp_err_t adc_sampler_stop(void);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* ADC_SAMPLER_H */
