@@ -26,7 +26,7 @@ Azura v1 is close, but it is not ready for layout or for a first firmware build.
 3. `adc_continuous_del_handle()` does not exist in ESP-IDF v6.1. The function is `adc_continuous_deinit()`.
 4. The two ISR callbacks carry `IRAM_ATTR` on both their prototypes and their definitions. Each expansion picks a different section name, and GCC rejects the clash under `-Werror=attributes`. (Confirmed by building against v6.1. I had listed a `%u` format issue here, but v6.1's log macros don't format-check, so that one is only a should-fix.)
 
-**Decisions (20 Oct 2026).** The SY6280 load switch replaces the discrete limiter and switch. The BOM stays as small as possible: the trims in the Schematic review take the board from 40 parts to 31, and anything optional goes in as an unfitted footprint. The status LED and fallback switch are parked. Until then, firmware can use the module's own LED and BOOT button at no cost. The lamp and enclosure aren't chosen yet, so R\_SET, the fitted lamp connector and the board outline wait for them.
+**Decisions (20 Oct 2026).** The SY6280 load switch replaces the discrete limiter and switch. The BOM stays as small as possible: the trims in the Schematic review take the board from 40 parts to 32, and anything optional goes in as an unfitted footprint. The status LED and fallback switch are parked as unfitted footprints; until they are fitted, the firmware uses the module's own LED and BOOT button. The lamp and enclosure aren't chosen yet, so R\_SET, the fitted lamp connector and the board outline wait for them.
 
 **On the DSP question:** yes, leaky integrators are the right tool. Two of them, a fast envelope and a slow noise floor, form a short-term/long-term ratio detector. A timing state machine on top does the double-clap logic (Double-clap DSP section).
 
@@ -51,12 +51,12 @@ Azura v1 is a USB-C pass-through box that toggles a 5 V USB lamp on a double cla
 | Detection with TV or music at conversation level | ≥ 85 % |
 | False toggles from normal household sound | ≤ 1 per 24 h (stretch: ≤ 1 per week) |
 | Latency, second clap to lamp change | ≤ 600 ms for clap gaps up to 400 ms |
-| Lamp current | ≤ 1.5 A (what J4's 22 kΩ Rp advertises) |
+| Lamp current | ≤ 1 A (5 W): the SY6280's limit is ±25 %, and R\_SET = 4.7 kΩ gives 1.1–1.8 A |
 | Board draw with lamp off, radio off | < 50 mA |
 
 **Assumptions this plan rests on** — each is also an open question at the end
 
-- The lamp isn't chosen yet. The plan assumes a 5 V lamp drawing at most 1.5 A; R\_SET is set once the real one is measured.
+- The lamp isn't chosen yet. The plan assumes a 5 V lamp drawing at most 1 A (5 W); R\_SET is set once the real one is measured, and a lamp over about 1.1 A needs a different switch.
 - No enclosure yet. The layout assumes an inline box: input at one end, lamp at the other, sound hole under the board.
 - v1 keeps the ESP32-C3 SuperMini plug-in module on sockets, with Wi-Fi and BLE off.
 - Fab and assembly at JLCPCB (the schematic carries LCSC part numbers), 2-layer, 1.6 mm, parts on the top side only. Only the lamp connector the lamp needs gets fitted.
@@ -99,15 +99,15 @@ The KiCad steps for all of this, in order, are in Board to-do.
 | 3 | Must fix | MCU power: J3.1 | Module 5V pin tied to `USB_VBUS`: a PC on the module's USB and a charger on J1 end up shorted together | Schottky in series, anode `USB_VBUS`, cathode J3.1 (e.g. B5819W, 1 A); the module's LDO still gets about 4.7 V. A solder jumper you open while developing costs no parts, but is easy to forget | Open |
 | 4 | Must fix | Connector: J5 | Footprint is Würth 614004134726, but LCSC C428472 is a SOFNG USB-101 (THT). Pin and tab positions unverified | Compare both drawings, then change the footprint or the part. Only matters if J5 gets fitted (#23) | Open |
 | 5 | Must fix | Mic: U2 | Bottom-port mic (Ø0.25 mm port) needs a hole through the PCB. The easyeda2kicad footprint may not have one | 0.5–0.8 mm NPTH on the port centre, inside the ground ring. No paste or vias near it | Open |
-| 6 | Should fix | Power path | Discrete limiter and switch drop 0.62 V at 1.5 A (lamp gets 4.38 V). A soft overload puts about 2.4 W into Q2 (SOT-23) with no thermal cut-off | SY6280AAC (C55136) replaces Q1–Q4, R9, R13 and R16–R18. EN comes straight from GPIO3, with R10 as its pull-down. R\_SET 4.3 kΩ gives 1.2–2.0 A, enough for lamps up to about 1.2 A; a 1.5 A lamp needs about 3.3 kΩ (1.5–2.6 A). Set it once the lamp is measured | Agreed |
+| 6 | Should fix | Power path | Discrete limiter and switch drop 0.62 V at 1.5 A (lamp gets 4.38 V). A soft overload puts about 2.4 W into Q2 (SOT-23) with no thermal cut-off | SY6280AAC (C55136) replaces Q1–Q4, R9, R13 and R16–R18. EN comes straight from GPIO3, with R10 as its pull-down. R\_SET 4.7 kΩ (C23162, the same part as R14) gives 1.1–1.8 A, right for lamps up to 1 A (5 W). Use 4.3 kΩ for a 5–6 W lamp; below about 3.6 kΩ the limit can exceed the SY6280's 2 A rating. C12 (10 µF) at OUT protects the 6 V-rated pin | Agreed |
 | 7 | Should fix | Power: D1 and C1 | The SY6280 is rated 6 V absolute maximum on every pin, below the SMAJ5.0A's 6.4 V minimum breakdown. The TVS alone can't hold hot-plug ringing under that | D1 and C1 within 5 mm of J1's VBUS pins. Keep C1 an electrolytic, since its ESR damps the ringing. Stay with SMAJ5.0A, the lowest-voltage part in its series | Open |
 | 8 | Should fix | Output: Q4 slew | Q4 switches in tens of ns, so the lamp's input cap charges from the bulk caps and can brown out the ESP32 | Not needed: the SY6280 replaces Q4 and limits turn-on current | Won't fix |
 | 9 | Should fix | Analogue: bias | U1 is biased at 1.1 V in a 0–3.5 V output range, then the ×2/3 divider puts the ADC at 0.73 V. Claps above about 99 dB SPL peak (closer than \~1 m) clip | Remove R15 (#20) and keep the 1.1 V bias: the ADC sits mid-range at about 1800 codes, with the same clip point and 1.5× the resolution. Optional: R7 → 120 kΩ (1.24 V bias) for 1 dB more headroom | Open |
-| 10 | Should fix | Analogue: anti-alias | The only pole is at 23.9 kHz (6.67 kΩ, 1 nF). Nyquist is 8 kHz at 16 kHz sampling | C9 1 nF → 3.3 nF: 4.8 kHz with R8 alone, once R15 is gone. 560 pF across R5 as an unfitted footprint | Open |
+| 10 | Should fix | Analogue: anti-alias | The only pole is at 23.9 kHz (6.67 kΩ, 1 nF). Nyquist is 8 kHz at 16 kHz sampling | R8 10 kΩ → 22 kΩ (the same part as R11/R12), C9 stays 1 nF: 7.2 kHz once R15 is gone, with no new part. 560 pF across R5 as an unfitted footprint | Open |
 | 11 | Should fix | Analogue: U1 supply | The LM358 runs from raw `USB_VBUS`, so charger ripple and PWM-dimmed lamp current feed straight into the gain stage | Footprints only: 47 Ω with a bridged solder jumper across it, and an unfitted 10 µF. Fit both if lamp-on captures show noise | Open |
 | 12 | Should fix | Bring-up | No test points | Bare copper test pads, no BOM cost: J1 VBUS, `USB_VBUS`, lamp VBUS, `3v3`, op-amp out, `ADC_IN`, EN, GND | Open |
 | 13 | Should fix | BOM: module | J2/J3 sockets have no LCSC part, and the SuperMini isn't in the BOM | Sockets on the first boards. Later, solder the module down and drop both | Open |
-| 14 | Nice to have | UX | No manual control or feedback | Parked. Firmware uses the module's GPIO8 LED for feedback and its BOOT button (GPIO9) as the fallback toggle. Unfitted tact-switch footprint on GPIO10 for the enclosure | Open |
+| 14 | Nice to have | UX | No manual control or feedback | Parked. Firmware uses the module's GPIO8 LED for feedback and its BOOT button (GPIO9) as the fallback toggle. Unfitted footprints on the carrier: a status LED on GPIO7 (D4, R21) and a tact switch on GPIO10 (SW1) | Open |
 | 15 | Nice to have | Output: J4 | Hot source: VBUS goes on without checking that a sink is attached | Deferred to v1.1 | Won't fix |
 | 16 | Nice to have | Output: J5 | Some USB-A devices draw ≤ 500 mA unless D+ is shorted to D− (BC1.2 charger signature) | Unfitted 0 Ω footprint between J5 D+ and D−, no BOM cost | Open |
 | 17 | Nice to have | Diagnostics | No supply monitor | Deferred to v1.1 | Won't fix |
@@ -115,12 +115,12 @@ The KiCad steps for all of this, in order, are in Board to-do.
 | 19 | Nice to have | ERC tidy | A dangling wire stub above C5. Four NC flags sit on wire stubs off J1 D+/D− rather than on the pins. Label typos "OUPTUT", "ANALOUGE" | Delete the stub, move the NC flags onto the pins, fix the labels | Open |
 | 20 | Should fix | BOM: R15 | Only there to scale U1's output into the ADC range, which the drawn bias already fits | Remove R15. R14 stays: it is then the only DC load keeping the LM358 in class A | Open |
 | 21 | Should fix | BOM: C6 | With the SY6280 limiting lamp inrush, one bulk cap is enough | Remove C6; keep C1 at J1 (#7) | Open |
-| 22 | Should fix | BOM: D2 | The SY6280 turns off in about 10 µs at up to 2 A, so 1 µH of cable kicks the lamp port by only about 0.2 V | Keep the footprint, leave D2 unfitted. Fit it only if the bring-up short test takes the port below −0.3 V | Open |
+| 22 | Should fix | BOM: D2 | The SY6280 turns off in about 10 µs at up to 2 A, so 1 µH of cable kicks the lamp port by only about 0.2 V | Keep the footprint, leave D2 unfitted. Fit it only if the bring-up short test takes the port below −0.3 V; C12 at U3's OUT pin already damps it | Open |
 | 23 | Should fix | BOM: lamp connectors | Both J4 and J5 are fitted, but only one lamp is used | Keep both footprints; fit only the one the lamp needs. R11/R12 go with J4 | Open |
 
 ### BOM after these changes
 
-The board goes from 40 parts as drawn to 31. That drops to 30 once only one lamp connector is fitted, or 28 if it's J5, since R11 and R12 go with J4.
+The board goes from 40 parts as drawn to 32. That drops to 31 once only one lamp connector is fitted, or 29 if it's J5, since R11 and R12 go with J4.
 
 | Change | Out | In |
 | --- | --- | --- |
@@ -129,8 +129,9 @@ The board goes from 40 parts as drawn to 31. That drops to 30 once only one lamp
 | Divider resistor (#20) | R15 (1) |  |
 | Second bulk cap (#21) | C6 (1) |  |
 | Output clamp (#22) | D2 (1, footprint kept) |  |
+| Lamp-port capacitor (#6) |  | C12, 10 µF (1, same part as C4) |
 
-These footprints stay on the board unfitted, at no BOM cost: D2, the U1 RC (#11), 560 pF across R5 (#10), the GPIO10 button (#14), the J5 D+/D− link (#16), and the test pads (#12).
+These footprints stay on the board unfitted, at no BOM cost: D2, the U1 RC (#11), 560 pF across R5 (#10), the GPIO7 status LED and GPIO10 button (#14), the J5 D+/D− link (#16), and the test pads (#12).
 
 At JLC each extended part type adds a setup fee per order, so cutting unique extended parts saves more than cutting basic passives. Check which of the SY6280, mic, TVS and connectors are basic parts.
 
@@ -140,7 +141,7 @@ At JLC each extended part type adds a setup fee per order, so cutting unique ext
 - J4 CC1/CC2 have 22 kΩ Rp to 5 V, which advertises 1.5 A.
 - U1B is parked as a follower with + at GND, inside the LM358's input range.
 - R14 (4.7 kΩ output pull-down) keeps the LM358 in class A and avoids crossover distortion. Keep it, all the more once R15 goes.
-- Without R15, a very loud clap can drive the ADC pin towards 3.75 V. R8 limits the clamp current to about 15 µA, which is harmless, and those samples simply read full scale.
+- Without R15, a very loud clap can drive the ADC pin towards 3.75 V. With R8 at 22 kΩ the clamp current stays under 10 µA, which is harmless, and those samples simply read full scale.
 - R3/C4 give the mic a 159 Hz-filtered 3.3 V supply with a 17.5 mV drop.
 - R10 holds the lamp off through reset and boot, and does the same job on the SY6280's EN.
 - LCSC codes for R4, R5, R11, R15 and R16 match their values. The mic (C51928208) is in stock.
@@ -163,11 +164,11 @@ If Wi-Fi is wanted later, turn the module so its antenna end overhangs the right
 ### Placement, in this order
 
 1. **Mechanical first.** With no enclosure yet, assume an inline box: board outline, J1 on one end, the J4/J5 footprints on the opposite end, mounting holes. Input and outputs at opposite ends make the power path a straight line.
-2. **Power edge.** J1 → D1 and C1 within 5 mm of the VBUS pins → C2 at the SY6280's IN pin → SY6280 → J4/J5, all along one long edge. The unfitted D2 footprint sits at the lamp connectors.
+2. **Power edge.** J1 → D1 and C1 within 5 mm of the VBUS pins → C2 at the SY6280's IN pin → SY6280 → C12 at its OUT pin → J4/J5, all along one long edge. The unfitted D2 footprint sits at the lamp connectors.
 3. **SuperMini.** Sockets J2/J3 with the module's USB-C at a board edge, so you can flash and stream captures in place. Over the antenna end, keep both layers free of copper for its full width; this matters if Wi-Fi is ever switched on. Small passives can sit under the module (sockets give about 8.5 mm clearance), but not the analogue parts.
 4. **Analogue corner,** furthest from the power edge. U2 goes where the enclosure's sound opening will be. U1 sits within 10 mm of U2, with R4–R7, C3 and C8 around it. Put R8 and R14 by U1's output, and C9 at J3 pin 8 (the ADC pin).
 5. **Decoupling.** C7 at U1 pin 8, with the unfitted RC from #11 just before it. C5 within 2 mm of U2's VDD, C2 at the SY6280's IN pin.
-6. **Unfitted footprints.** The GPIO10 button goes where the enclosure will let a finger reach it. The 560 pF goes across R5, and the D+/D− link at J5.
+6. **Unfitted footprints.** The GPIO10 button goes where the enclosure will let a finger reach it, and the GPIO7 LED where it can be seen. The 560 pF goes across R5, and the D+/D− link at J5.
 
 ### Ground
 
@@ -180,7 +181,7 @@ If Wi-Fi is wanted later, turn the module so its antenna end overhangs the right
 
 - Join J1's four VBUS pads on the connector side, then go straight to a wide pour. Do the same at J4.
 - SY6280: short pours on IN (pin 5) and OUT (pin 1). R\_SET goes right at ISET (pin 3) with its own GND via. R10 sits at EN (pin 4), and EN runs straight from GPIO3.
-- At 1.5 A the SY6280 dissipates about 0.18 W, which is fine in SOT-23-5 with pours.
+- At 1 A the SY6280 dissipates about 0.08 W (0.18 W at 1.5 A), which is fine in SOT-23-5 with pours.
 
 ### Analogue routing
 
@@ -242,20 +243,20 @@ I read the v6.1 driver source to check these against what the driver actually do
 | Deinit calls `adc_continuous_register_event_callbacks(handle, NULL, NULL)` | v6.1 returns `ESP_ERR_INVALID_ARG` for a NULL table, so deinit exits early and leaks the handle | Pass a zeroed `adc_continuous_evt_cbs_t`, or skip the call: deinit frees everything anyway |
 | One queue token per frame | The driver's ISR calls `on_conv_done` even when its ring-buffer push failed. After an overflow, tokens point at frames that no longer exist | Use a task notification as a wake-up hint, then drain `adc_continuous_read(…, 0)` until `ESP_ERR_TIMEOUT` (Espressif's example pattern) |
 | A short read is treated as `ESP_FAIL` and discarded | The read uses `xRingbufferReceiveUpTo`, which legitimately returns less at the buffer's wrap point | Accept any multiple of 4 bytes and process it |
-| 1024-byte pool | 4 frames, 32 ms: any stall longer than that (console output with no host attached, a flash write) drops audio | 4096–8192 bytes (64–128 ms), and keep logging out of the audio task |
+| 1024-byte pool | 4 frames of 64 samples, 16 ms: any stall longer than that (console output with no host attached, a flash write) drops audio | 4096–8192 bytes (64–128 ms), and keep logging out of the audio task |
 | `.format = …` | Deprecated in v6.1; the C3 has one fixed output format | Delete it |
 | `pdTICKS_TO_MS(portMAX_DELAY)` | Overflows to a garbage timeout | Map `portMAX_DELAY` to `ADC_MAX_DELAY` |
-| `ESP_LOGE` on every timeout | Floods the console at 125 frames/s | Count errors in a stats struct; log a summary every few seconds |
+| `ESP_LOGE` on every timeout | Floods the console at 250 frames/s | Count errors in a stats struct; log a summary every few seconds |
 | Init failures return without cleanup | The handle leaks on a half-built driver | One cleanup path that stops and deinits |
 
 Each C3 conversion result is 4 bytes (`adc_digi_output_data_t.type2`: 12-bit data, 3-bit channel, unit bit). Check channel 0 / unit 0, then keep the 12-bit value. `adc_continuous_parse_data()` does the same work but writes a 16-byte struct per sample.
 
-### Proposed sampler API
+### Sampler API (as built in PR #1)
 
 ```c
-typedef struct { uint32_t samples, overflows, short_reads, bad_results; } adc_sampler_stats_t;
+typedef struct { uint32_t samples, overflows, bad_results, read_errors; } adc_sampler_stats_t;
 esp_err_t adc_sampler_start(void);
-size_t    adc_sampler_read(int16_t *out, size_t max_samples, TickType_t wait); /* decoded 12-bit samples */
+size_t    adc_sampler_read(uint16_t *out, size_t max_samples, TickType_t ticks_to_wait); /* raw 12-bit codes, ≤ one 128-sample frame */
 void      adc_sampler_get_stats(adc_sampler_stats_t *out);
 esp_err_t adc_sampler_stop(void);
 ```
@@ -380,7 +381,7 @@ Test in three passes: bench bring-up of the power and analogue paths, scoring th
 - [ ] Flash a bring-up build over the module's USB with J1 also powered (proves fix #3): LED blinks, `3v3` within 3.2–3.4 V
 - [ ] Lamp stays off through power-up, reset and flashing (scope on lamp VBUS while rebooting)
 - [ ] The BOOT button toggles the lamp: the zero-part fallback works
-- [ ] Load the lamp port with 4.7 Ω (about 1 A, under the lowest possible current limit) and toggle EN every 2 s: port voltage at least 4.85 V from a 5.0 V source, switch temperature rise under 30 °C after 10 minutes. Then step up an electronic load to find where this board's limit actually sits
+- [ ] Load the lamp port with 5.6 Ω (about 0.9 A, under the lowest possible limit of 1.1 A) and toggle EN every 2 s: port voltage at least 4.85 V from a 5.0 V source, switch temperature rise under 30 °C after 10 minutes. Then step up an electronic load to find where this board's limit actually sits
 - [ ] Scope `USB_VBUS` as EN rises, with 100 µF across the load: dip under 0.5 V, no ESP32 reset
 - [ ] Hot-plug a USB-A charger through an A-to-C cable ten times, scope on J1 VBUS: peaks stay under 6 V, the SY6280's absolute maximum (#7)
 - [ ] Short the lamp port: the switch limits and cycles, `USB_VBUS` holds, and the board keeps running. Scope the port as well: if it swings below −0.3 V, fit D2 (#22)
@@ -492,12 +493,12 @@ The biggest risk is false triggers in a real home, and the mitigation is the dat
 
 My working assumption is in brackets; correct any that are wrong. You answered 1, 2, 3 and 6 on 20 Oct.
 
-1. **Lamp:** not chosen yet. The plan keeps 5 V and at most 1.5 A; R\_SET and the fitted connector follow the choice.
+1. **Lamp:** not chosen yet. The plan keeps 5 V and at most 1 A (5 W); R\_SET and the fitted connector follow the choice.
 2. **Output switch:** SY6280, decided.
 3. **Enclosure:** none yet. The layout assumes an inline box: input at one end, lamp at the other, sound hole under the board.
 4. Assembly: JLC top-side SMT with C1, J5 and the sockets hand-soldered, 5 boards? (Yes)
 5. Is there a working breadboard of the mic and LM358 front end? It would let capture and DSP work start now. (No)
-6. **Button and LED:** parked. Firmware uses the module's LED and BOOT button, and an unfitted footprint is ready for an external button.
+6. **Button and LED:** parked. Firmware uses the module's LED and BOOT button, and unfitted footprints are ready for a carrier LED (GPIO7) and button (GPIO10).
 7. Any Wi-Fi or Bluetooth plans, such as Home Assistant? This affects the antenna keep-out and the power budget. (Not in v1, but keep the keep-out)
 8. After a power cut, should the lamp come back off or restore its last state? (Off)
 9. Was `sdkconfig.ci` meant for CI? Should I set up GitHub Actions? (Yes, in Phase 1b)
@@ -543,6 +544,10 @@ I extracted this with a script that parses the `.kicad_sch` (wires, junctions, l
 | [C8542](https://www.lcsc.com/product-detail/C8542.html) | JSCJ SS8550 Y2 | 1.5 A, 25 V, 300 mW; confirm the pinout in its datasheet |
 | [C2925443](https://www.lcsc.com/product-image/C2925443.html) | Liown SMAJ5.0A | Unidirectional, so the polarity matters (#1) |
 | [C25819](https://www.lcsc.com/product-detail/C25819.html), [C25811](https://www.lcsc.com/product-detail/C25811.html), [C4184](https://www.lcsc.com/product-detail/C4184.html), [C31850](https://www.lcsc.com/product-detail/C31850.html) | 0603 1 % resistors | 47 k, 200 k, 20 k, 22 k: all match R5, R4, R15, R11/R12 |
+| [C8598](https://www.lcsc.com/product-detail/C8598.html) | JSCJ B5819W SL, SOD-123 | 40 V 1 A Schottky for D3, 84,360 in stock |
+| [C23162](https://www.lcsc.com/product-detail/C23162.html) | 4.7 kΩ 1 % 0603 | R14 and R\_SET (R19); 4.3 kΩ is C23159 |
+| [C1588](https://www.lcsc.com/product-detail/C1588.html) | Samsung 1 nF 50 V X7R 0603 | C9, over 1 million in stock |
+| [C2286](https://www.lcsc.com/product-detail/C2286.html) | KENTO KT-0603R red LED | Optional status LED D4, with 1 kΩ (C21190, as R6) |
 
 ### Sources
 

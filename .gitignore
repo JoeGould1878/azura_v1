@@ -7,3 +7,11 @@ __pycache__/
 *.pyc
 .vscode/
 .cache/
+
+# KiCad
+*-backups/
+fp-info-cache
+*.lck
+_autosave-*
+\#auto_saved_files#
+*.kicad_prl
