@@ -1,0 +1,19 @@
+# Azura v1 build defaults. `sdkconfig` is generated from this file (and is git-ignored).
+CONFIG_IDF_TARGET="esp32c3"
+
+# The SuperMini's USB-C goes straight to the C3's USB-Serial-JTAG; there is no USB-UART chip.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+# SuperMini modules carry 4 MB of flash.
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
+# 1 ms ticks so ADC read timeouts and button polling have 1 ms resolution.
+CONFIG_FREERTOS_HZ=1000
+
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_160=y
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+
+# Task watchdog: the audio task subscribes to it, so a stalled detector resets the chip
+# (and a reset always leaves the lamp off).
+CONFIG_ESP_TASK_WDT_EN=y
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=5
