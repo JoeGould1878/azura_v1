@@ -17,6 +17,7 @@ static bool s_pressed;
 static void led_write(bool on)
 {
     gpio_set_level(BOARD_GPIO_LED, on ? BOARD_LED_ACTIVE_LEVEL : !BOARD_LED_ACTIVE_LEVEL);
+    gpio_set_level(BOARD_GPIO_EXT_LED, on ? BOARD_EXT_LED_ACTIVE_LEVEL : !BOARD_EXT_LED_ACTIVE_LEVEL);
 }
 
 static void led_off_cb(void *arg)
@@ -29,7 +30,7 @@ esp_err_t ui_init(void)
 {
     led_write(false);
     const gpio_config_t led = {
-        .pin_bit_mask = 1ULL << BOARD_GPIO_LED,
+        .pin_bit_mask = (1ULL << BOARD_GPIO_LED) | (1ULL << BOARD_GPIO_EXT_LED),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -61,8 +62,8 @@ esp_err_t ui_init(void)
     if (err != ESP_OK) {
         return err;
     }
-    ESP_LOGI(TAG, "LED on GPIO%d, buttons on GPIO%d (BOOT) and GPIO%d (SW1)",
-             BOARD_GPIO_LED, BOARD_GPIO_BOOT_BUTTON, BOARD_GPIO_EXT_BUTTON);
+    ESP_LOGI(TAG, "LEDs on GPIO%d (module) and GPIO%d (D4), buttons on GPIO%d (BOOT) and GPIO%d (SW1)",
+             BOARD_GPIO_LED, BOARD_GPIO_EXT_LED, BOARD_GPIO_BOOT_BUTTON, BOARD_GPIO_EXT_BUTTON);
     return ESP_OK;
 }
 

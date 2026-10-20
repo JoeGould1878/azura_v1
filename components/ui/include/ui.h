@@ -11,7 +11,7 @@ extern "C" {
 
 /*
  * Zero-part user interface: the SuperMini's own blue LED for feedback and its BOOT button as the
- * fallback lamp toggle, plus the optional external button footprint (SW1) if it is ever fitted.
+ * fallback lamp toggle, plus the optional carrier footprints (status LED D4, button SW1) if fitted.
  */
 
 /** Call ui_button_pressed() at this interval; debouncing is counted in polls. */

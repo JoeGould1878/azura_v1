@@ -18,6 +18,11 @@
 #define BOARD_GPIO_LED          8
 #define BOARD_LED_ACTIVE_LEVEL  0
 
+/* Optional status LED on the carrier (unfitted footprints D4 + R21 on J2, GPIO7 -> R21 -> D4 -> GND),
+ * active high. Driven together with the module LED; harmless when not fitted. */
+#define BOARD_GPIO_EXT_LED          7
+#define BOARD_EXT_LED_ACTIVE_LEVEL  1
+
 /* The module's BOOT button, active low. Holding it at reset enters the bootloader;
  * after boot it is a free input and serves as the manual (fallback) lamp toggle. */
 #define BOARD_GPIO_BOOT_BUTTON  9
