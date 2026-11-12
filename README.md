@@ -7,7 +7,7 @@ A USB-C pass-through box that switches a 5 V USB lamp when you clap twice.
 - **Audio:** MSM381ACB026 bottom-port MEMS mic → LM358 gain ×48 → RC filter → GPIO0 (ADC1 channel 0), sampled at 16 kHz with DMA.
 - **UI:** the module's blue LED (GPIO8) for feedback, its BOOT button (GPIO9) as a manual toggle; optional carrier footprints for a status LED (GPIO7) and a button (GPIO10).
 
-Status: **Phase 0**. The firmware builds and the bring-up app runs on a bare SuperMini; the clap detector (Phase 1b) and the PCB layout (Phase 1) are next. See [docs/design.md](docs/design.md) for the design and plan, [docs/board-todo.md](docs/board-todo.md) for the KiCad change list, and [context.md](context.md) for where things stand.
+Status: **M0** (see [docs/MILESTONES.md](docs/MILESTONES.md)). The firmware builds on ESP-IDF v6.1; it hasn't been run on a SuperMini yet. Next: the KiCad changes in [docs/BOARD_TODO.md](docs/BOARD_TODO.md) (M1) and the clap detector in C (M3). Design: [docs/DESIGN.md](docs/DESIGN.md). Where things stand: [CONTEXT.md](CONTEXT.md).
 
 ## Build and flash
 

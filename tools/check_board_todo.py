@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check an Azura v1 schematic against the board to-do (docs/board-todo.md).
+"""Check an Azura v1 schematic against the board to-do (docs/BOARD_TODO.md).
 
 Usage: python3 tools/check_board_todo.py hardware/<name>.kicad_sch
 
@@ -110,7 +110,7 @@ class Report:
 
 
 def main(path):
-    print(f'Checking {path} against docs/board-todo.md\n')
+    print(f'Checking {path} against docs/BOARD_TODO.md\n')
     return check(netlist(path))
 
 

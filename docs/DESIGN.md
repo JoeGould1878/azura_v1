@@ -281,7 +281,7 @@ components/lamp/         GPIO3 / EN control
 components/capture/      optional raw-audio streaming for recording the dataset
 test/host/               CMake + gcc build of clap_dsp, unit tests, WAV runner
 tools/                   capture.py (serial to WAV), eval.py (scores the labelled dataset)
-docs/                    context.md, exported design doc
+docs/                    DESIGN.md, MILESTONES.md, BOARD_TODO.md (CONTEXT.md is at the root)
 ```
 
 CI on GitHub Actions has two jobs: build the firmware in the `espressif/idf:v6.1` container, and run the host tests.

@@ -1,7 +1,7 @@
 # Board to-do: KiCad changes, step by step
 
 > Snapshot of the "Board to-do" tab of the design doc, 20 Oct 2026. Row numbers (#) refer to the
-> Schematic review table in [design.md](design.md). Check your schematic against it with
+> Schematic review table in [DESIGN.md](DESIGN.md). Check your schematic against it with
 > `python3 tools/check_board_todo.py hardware/<name>.kicad_sch`.
 
 Work top to bottom. Each step names the parts, nets and values, with the Schematic review row (#) it comes from. Use the reference designators given here, setting them by hand in Symbol Properties: the check script finds parts by name. When the schematic is done, commit it to the repo (step 0) and I'll check it against this list before you start layout. The fitted board comes to 32 parts, against 40 as drawn.
@@ -95,7 +95,7 @@ Work top to bottom. Each step names the parts, nets and values, with the Schemat
 
 ## Layout settings to enter first
 
-Then follow the PCB layout guide in [design.md](design.md).
+Then follow the PCB layout guide in [DESIGN.md](DESIGN.md).
 
 | Setting | Value |
 | --- | --- |
